@@ -1,2 +1,2 @@
 # dimpling
-A repository containing an heuristic solution for the WMPG
+A repository containing solutions for the WMPG
