@@ -106,6 +106,14 @@ int64 numComb[MAXV];
 vector<edge> idx_to_edge;
 //Edge to Index
 map<ii, int> edge_to_idx;
+
+//Degree of each vertex
+int vertex_degree[MAXV];
+int min_degree;
+int max_degree;
+int avg_degree;
+
+set<ii> degrees;
 //-----------------------------------------------------------------------------
 /*
     Defines the number of combinations.
@@ -457,6 +465,7 @@ int main(int argv, char** argc)
     readInput();
 
     int respMax = -1;
+    min_degree = MAXV;
 
     start = getTime();
     #pragma omp parallel for
@@ -478,6 +487,29 @@ int main(int argv, char** argc)
 
         #pragma omp critical
         {
+            //For analysis only
+            for (int j = 0; j < numFaces; ++j)
+                for (int k = 0; k < 3; ++k)
+                    //increase the degree of a vertex
+                    //each time it appears
+                    vertex_degree[tmpFaces[j][k]]++;
+            
+            for (int i = 0; i < V; i++)
+            {
+                min_degree = min(min_degree, vertex_degree[i]);
+                max_degree = max(max_degree, vertex_degree[i]);
+                avg_degree += vertex_degree[i]; 
+                //clear it to be used in another iteration
+                vertex_degree[i] = 0;
+            }
+
+            degrees.insert(mp(0, min_degree));
+            degrees.insert(mp(1, max_degree));
+            degrees.insert(mp(2, avg_degree/V));
+            min_degree = MAXV;
+            avg_degree = 0;
+            //Analysis code ends here
+
             if (ans >= respMax)
             {
                 respMax = ans;
@@ -508,7 +540,9 @@ int main(int argv, char** argc)
     }
 
     printElapsedTime(start, stop);
-    printf("Maximum weight found: %d\n", respMax);
+    printf("Maximum weight found: %d\n\n", respMax);
 
+    for (auto d : degrees)
+        printf("Degree type %d -- degree value %d\n", d.first, d.second);
     return 0;
 }
