@@ -11,6 +11,8 @@ typedef long long int64;
 typedef pair<int, int> ii;
 typedef vector<int> vi;
 
+const double MINUTE = 60.0;
+const double HOUR = 3600.0;
 const double EPS = 1e-9;
 const int INF = 0x3f3f3f3f;
 const int MOD = 1000000007;
@@ -51,24 +53,24 @@ struct edge{
 #endif
 //-----------------------------------------------------------------------------
 /*
-    Print elapsed time.
+    Prints the elapsed time.
     */
 void printElapsedTime(double start, double stop)
 {
     double elapsed = stop - start;
     printf("Elapsed time: %.3lfs.\n", elapsed);
-    if (cmp(elapsed, 60.0) == 1)
-        printf("Elapsed time: %.3lfmin.\n", elapsed/60.0);
-    if (cmp(elapsed, 3600.0) == 1)
-        printf("Elapsed time: %.3lfhs.\n", elapsed/3600.0);
+    if (cmp(elapsed, MINUTE) == 1)
+        printf("Elapsed time: %.3lfmin.\n", elapsed/MINUTE);
+    if (cmp(elapsed, HOUR) == 1)
+        printf("Elapsed time: %.3lfhs.\n", elapsed/HOUR);
 }
 //-----------------------------------------------------------------------------
 /*  
-    Get clock time.
+    Gets the clock time.
     */
-void current_utc_time(struct timespec *ts) 
+void getCurrentTime(struct timespec *ts) 
 {
-    #ifdef __MACH__ // OS X does not have clock_gettime, use clock_get_time
+    #ifdef __MACH__ //OS X does not have clock_gettime, use clock_get_time
         clock_serv_t cclock;
         mach_timespec_t mts;
         host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
@@ -84,7 +86,7 @@ void current_utc_time(struct timespec *ts)
 double getTime()
 {
     timespec ts;
-    current_utc_time(&ts);
+    getCurrentTime(&ts);
     return double(ts.tv_sec) + double(ts.tv_nsec) / 1e9;
 }
 //-----------------------------------------------------------------------------
@@ -106,9 +108,9 @@ vector<edge> idx_to_edge;
 map<ii, int> edge_to_idx;
 //-----------------------------------------------------------------------------
 /*
-    Define the number of combinations.
+    Defines the number of combinations.
     */
-void sizeDefinitions()
+void defineCombinations()
 {
     for (int64 i = 4LL; i <= MAXV; ++i)
     {
@@ -149,9 +151,9 @@ void readInput()
 }
 //-----------------------------------------------------------------------------
 /*
-    Generates a list having vertices which are not on the planar graph.
+    Creates a list having vertices which are not on the planar graph.
     */
-void generateVertexList(int idx, set<int>& vertices)
+void createVertexList(int idx, set<int>& vertices)
 {
     vector<int> seeds = c.element(idx).getArray();
     for (int i = 0; i < V; ++i)
@@ -162,7 +164,7 @@ void generateVertexList(int idx, set<int>& vertices)
 /*
     Returns the initial solution weight of the planar graph.
     */
-int generateFaceList(int idx, set<int>& edges, vector<vi>& edges_faces,
+int createFaceList(int idx, set<int>& edges, vector<vi>& edges_faces,
     Face tmpFaces[][3], int *numFaces)
 {
     vector<int> seeds = c.element(idx).getArray();
@@ -199,12 +201,17 @@ int generateFaceList(int idx, set<int>& edges, vector<vi>& edges_faces,
     return res;
 }
 //-----------------------------------------------------------------------------
+/*
+    Check wether this edge already belongs to two faces.
+    If remove_edge == true, this edge will be removed
+    from both faces it belongs to.
+    */
 void addEdgeToFace(edge at, int face, vector<vi>& edges_faces,
-    bool check = false)
+    bool remove_edge = false)
 {
     int e = edge_to_idx[mp(at.u, at.v)];
     //Check wether this edge already belongs to two faces.
-    if (check)
+    if (remove_edge)
     {
         for (int i = 0; i < edges_faces[e].size(); ++i)
             if (edges_faces[e][i] == face)
@@ -219,8 +226,8 @@ void addEdgeToFace(edge at, int face, vector<vi>& edges_faces,
 }
 //-----------------------------------------------------------------------------
 /*
-    Insert a new vertex, 3 new triangular faces
-    and removes the face from the list.
+    Inserts a new vertex, 3 new triangular faces
+    and removes the 'dimpled' face from the list.
     */
 void faceDimple(int new_vertex, int face, set<int>& edges, vector<vi>& edges_faces,
     int tmpFaces[][3], int *numFaces)
@@ -266,13 +273,13 @@ void faceDimple(int new_vertex, int face, set<int>& edges, vector<vi>& edges_fac
 }
 //-----------------------------------------------------------------------------
 /*
-    Inserts a new vertex and 4 new triangular faces
-    and removes two faces and an edge.
+    Inserts a new vertex and creates 4 new triangular faces.
+    This process removes two faces and an edge, and then, adds 4 edges.
     */
 void edgeDimple(int new_vertex, int edge_idx, int face, int extra, set<int>& edges,
     vector<vi>& edges_faces, int tmpFaces[][3], int *numFaces)
 {
-    //The removed edge.
+    //The edge removed
     edge r_edge = idx_to_edge[edge_idx];
 
     vector<edge> used_edges;
@@ -286,13 +293,13 @@ void edgeDimple(int new_vertex, int edge_idx, int face, int extra, set<int>& edg
             used.insert(u); used.insert(v);
             if (r_edge == edge(u, v))
             {
-                //Remove this edge from this face.
+                //Remove this edge from this face
                 addEdgeToFace(edge(u, v), face, edges_faces, true);
             }
             else
             {
                 used_edges.pb(edge(u, v));
-                //Remove this edge from this face.
+                //Remove this edge from this face
                 addEdgeToFace(edge(u, v), face, edges_faces, true);
             }
         }
@@ -305,13 +312,13 @@ void edgeDimple(int new_vertex, int edge_idx, int face, int extra, set<int>& edg
             used.insert(u); used.insert(v);
             if (r_edge == edge(u, v))
             {
-                //Remove this edge from this face.
+                //Remove this edge from this face
                 addEdgeToFace(edge(u, v), extra, edges_faces, true);
             }
             else
             {
                 used_edges.pb(edge(u, v));
-                //Remove this edge from this face.
+                //Remove this edge from this face
                 addEdgeToFace(edge(u, v), extra, edges_faces, true);
             }
         }
@@ -342,8 +349,7 @@ void edgeDimple(int new_vertex, int edge_idx, int face, int extra, set<int>& edg
 }
 //-----------------------------------------------------------------------------
 /*
-    Return the vertex with the maximum gain
-    inserting within a face.
+    Returns a vertex having the maximum gain inserting within a face.
     */
 node maxGainFace(set<int>& vertices, Face tmpFaces[][3], int *numFaces)
 {
@@ -369,7 +375,7 @@ node maxGainFace(set<int>& vertices, Face tmpFaces[][3], int *numFaces)
 }
 //-----------------------------------------------------------------------------
 /*
-    Return the edge with the removal has the maximum gain when inserting
+    Returns an edge which the removal has the maximum gain when inserting
     a vertex into it.
     */
 node maxGainEdge(set<int>& vertices, set<int>& edges, vector<vi>& edges_faces,
@@ -421,6 +427,8 @@ int solve(set<int>& vertices, set<int>& edges, vector<vi>& edges_faces,
         node gain_f = maxGainFace(vertices, tmpFaces, numFaces);
         node gain_e = maxGainEdge(vertices, edges, edges_faces, tmpFaces);
 
+        //Choose face dimple if the gain is the same
+        //since edge dimple is slower
         if (gain_f.w >= gain_e.w)
         {
             vertices.erase(gain_f.vertex);
@@ -443,9 +451,9 @@ int solve(set<int>& vertices, set<int>& edges, vector<vi>& edges_faces,
 int main(int argv, char** argc)
 {
     double start, stop;
-    //Read the input, which is given by the size of a graph and its weighted
+    //Read the input, which is composed by the size of a graph and its weighted
     //edges. The given graph is complete.
-    sizeDefinitions();
+    defineCombinations();
     readInput();
 
     int respMax = -1;
@@ -463,9 +471,9 @@ int main(int argv, char** argc)
         vector<vi> edges_faces(MAXE);
 
         //A list with the remaining vertices
-        generateVertexList(i, vertices);
+        createVertexList(i, vertices);
         //Get the weight of the initial solution
-        int tmpMax = generateFaceList(i, edges, edges_faces, tmpFaces, &numFaces);
+        int tmpMax = createFaceList(i, edges, edges_faces, tmpFaces, &numFaces);
         int ans = solve(vertices, edges, edges_faces, tmpMax, tmpFaces, &numFaces);
 
         #pragma omp critical
