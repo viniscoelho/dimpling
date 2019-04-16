@@ -58,11 +58,12 @@ struct edge{
 void printElapsedTime(double start, double stop)
 {
     double elapsed = stop - start;
-    printf("Elapsed time: %.3lfs.\n", elapsed);
-    if (cmp(elapsed, MINUTE) == 1)
-        printf("Elapsed time: %.3lfmin.\n", elapsed/MINUTE);
-    if (cmp(elapsed, HOUR) == 1)
+    if (cmp(elapsed, MINUTE) == -1)
+        printf("Elapsed time: %.3lfs.\n", elapsed);
+    else if (cmp(elapsed, HOUR) == 1)
         printf("Elapsed time: %.3lfhs.\n", elapsed/HOUR);
+    else if (cmp(elapsed, MINUTE) == 1)
+        printf("Elapsed time: %.3lfmin.\n", elapsed/MINUTE);
 }
 //-----------------------------------------------------------------------------
 /*  
