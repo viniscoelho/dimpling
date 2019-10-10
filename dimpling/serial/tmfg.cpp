@@ -14,17 +14,20 @@ const double EPS = 1e-9;
 
 const int C = 4; // Combination size
 const int MAXV = 100; // Max. number of vertices
-const int MAXF = 2*MAXV-4; // Num. of faces on a planar graph
+const int MAXF = 2 * MAXV - 4; // Num. of faces on a planar graph
 
-struct node
-{
+struct node {
     int w, vertex, face;
-    node (int w = 0, int vertex = 0, int face = 0)
-        : w(w), vertex(vertex), face(face) {}
+    node(int w = 0, int vertex = 0, int face = 0)
+        : w(w)
+        , vertex(vertex)
+        , face(face)
+    {
+    }
 };
 
-int sgn(double a){ return ((a > EPS) ? (1) : ((a < -EPS) ? (-1) : (0))); }
-int cmp(double a, double b = 0.0){ return sgn(a - b); }
+int sgn(double a) { return ((a > EPS) ? (1) : ((a < -EPS) ? (-1) : (0))); }
+int cmp(double a, double b = 0.0) { return sgn(a - b); }
 
 //-----------------------------------------------------------------------------
 // OSX
@@ -45,19 +48,19 @@ void printElapsedTime(double start, double stop)
 /*  
     Get clock time.
     */
-void current_utc_time(struct timespec *ts) 
+void current_utc_time(struct timespec* ts)
 {
-    #ifdef __MACH__ // OS X does not have clock_gettime, use clock_get_time
-        clock_serv_t cclock;
-        mach_timespec_t mts;
-        host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
-        clock_get_time(cclock, &mts);
-        mach_port_deallocate(mach_task_self(), cclock);
-        ts->tv_sec = mts.tv_sec;
-        ts->tv_nsec = mts.tv_nsec;
-    #else
-        clock_gettime(CLOCK_REALTIME, ts);
-    #endif
+#ifdef __MACH__ // OS X does not have clock_gettime, use clock_get_time
+    clock_serv_t cclock;
+    mach_timespec_t mts;
+    host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
+    clock_get_time(cclock, &mts);
+    mach_port_deallocate(mach_task_self(), cclock);
+    ts->tv_sec = mts.tv_sec;
+    ts->tv_nsec = mts.tv_nsec;
+#else
+    clock_gettime(CLOCK_REALTIME, ts);
+#endif
 }
 //-----------------------------------------------------------------------------
 double getTime()
@@ -82,44 +85,42 @@ vector<int> seeds;
 void readInput()
 {
     scanf("%d", &V);
-    for (int i = 0; i < V; ++i)
-    {
-        for (int j = i+1; j < V; ++j)
-        {
+    for (int i = 0; i < V; ++i) {
+        for (int j = i + 1; j < V; ++j) {
             scanf("%d", &graph[i][j]);
             graph[j][i] = graph[i][j];
         }
         graph[i][i] = 0;
     }
 
-    F = 2*V-4;
+    F = 2 * V - 4;
 }
 //-----------------------------------------------------------------------------
-void getHeaviestSeed(){
+void getHeaviestSeed()
+{
     vector<ii> vertices;
-    for (int i = 0; i < V; ++i)
-    {
+    for (int i = 0; i < V; ++i) {
         vertices.pb(mp(0, i));
-        for (int j = 0; j < V; ++j)
-        {
+        for (int j = 0; j < V; ++j) {
             vertices[i].fi += graph[i][j];
         }
     }
     sort(vertices.begin(), vertices.end(), greater<ii>());
-    for (int i = 0; i < 4; ++i) seeds.pb(vertices[i].se);
+    for (int i = 0; i < 4; ++i)
+        seeds.pb(vertices[i].se);
 }
 //-----------------------------------------------------------------------------
-int getUpperBound(){
+int getUpperBound()
+{
     vector<int> edges;
-    for (int i = 0; i < V; ++i)
-    {
-        for (int j = i+1; j < V; ++j)
-        {
+    for (int i = 0; i < V; ++i) {
+        for (int j = i + 1; j < V; ++j) {
             edges.pb(graph[i][j]);
         }
     }
     sort(edges.begin(), edges.end(), greater<int>());
-    for (int i = 0; i < 3*V-6; ++i) UB += edges[i];
+    for (int i = 0; i < 3 * V - 6; ++i)
+        UB += edges[i];
     return UB;
 }
 //-----------------------------------------------------------------------------
@@ -128,8 +129,7 @@ int getUpperBound(){
     */
 void generateVertexList(set<int>& vertices)
 {
-    for (int i = 0; i < V; ++i)
-    {
+    for (int i = 0; i < V; ++i) {
         if (i != seeds[0] && i != seeds[1] && i != seeds[2] && i != seeds[3])
             vertices.insert(i);
     }
@@ -138,24 +138,22 @@ void generateVertexList(set<int>& vertices)
 /*
     Returns the initial solution weight of the planar graph.
     */
-int generateFaceList(int *numFaces)
+int generateFaceList(int* numFaces)
 {
     int res = 0;
-    for (int i = 0; i < C-1; ++i)
-        for (int j = i+1; j < C; ++j)
-        {
+    for (int i = 0; i < C - 1; ++i)
+        for (int j = i + 1; j < C; ++j) {
             int va = seeds[i], vb = seeds[j];
             res += graph[va][vb];
         }
 
-    for (int i = 0; i < C-2; ++i)
-        for (int j = i+1; j < C-1; ++j)
-            for (int k = j+1; k < C; ++k, (*numFaces)++)
-            {
+    for (int i = 0; i < C - 2; ++i)
+        for (int j = i + 1; j < C - 1; ++j)
+            for (int k = j + 1; k < C; ++k, (*numFaces)++) {
                 //Vertices of a face
                 int va = seeds[i], vb = seeds[j], vc = seeds[k];
                 tmpFaces[*numFaces][0] = va, tmpFaces[*numFaces][1] = vb,
-                    tmpFaces[*numFaces][2] = vc;
+                tmpFaces[*numFaces][2] = vc;
             }
 
     return res;
@@ -165,34 +163,32 @@ int generateFaceList(int *numFaces)
     Inserts a new vertex, 3 new triangular faces
     and removes the face from the list.
     */
-void faceDimple(int new_vertex, int face, int *numFaces)
+void faceDimple(int new_vertex, int face, int* numFaces)
 {
     //Remove the chosen face and insert a new one on its place.
     int va = tmpFaces[face][0], vb = tmpFaces[face][1], vc = tmpFaces[face][2];
 
     tmpFaces[face][0] = new_vertex, tmpFaces[face][1] = va,
-        tmpFaces[face][2] = vb;
+    tmpFaces[face][2] = vb;
 
     //Insert the other two new faces.
     tmpFaces[*numFaces][0] = new_vertex, tmpFaces[*numFaces][1] = va,
-        tmpFaces[(*numFaces)++][2] = vc;
+    tmpFaces[(*numFaces)++][2] = vc;
     tmpFaces[*numFaces][0] = new_vertex, tmpFaces[*numFaces][1] = vb,
-        tmpFaces[(*numFaces)++][2] = vc;
+    tmpFaces[(*numFaces)++][2] = vc;
 }
 //-----------------------------------------------------------------------------
 /*
     Returns the vertex with the maximum gain inserting within a face.
     */
-node maxGainFace(set<int>& vertices, int *numFaces)
+node maxGainFace(set<int>& vertices, int* numFaces)
 {
     node gains(-1, -1, -1);
     // Iterate through the remaining vertices.
-    for (int new_vertex : vertices)
-    {
+    for (int new_vertex : vertices) {
         // Test which one has the maximum gain with its insertion
         // within all possible faces.
-        for (int face = 0; face < *numFaces; ++face)
-        {
+        for (int face = 0; face < *numFaces; ++face) {
             int va = tmpFaces[face][0], vb = tmpFaces[face][1],
                 vc = tmpFaces[face][2];
             int gain = graph[va][new_vertex] + graph[vb][new_vertex]
@@ -205,12 +201,11 @@ node maxGainFace(set<int>& vertices, int *numFaces)
     return gains;
 }
 //-----------------------------------------------------------------------------
-int solve(set<int>& vertices, int tmpMax, int *numFaces)
+int solve(set<int>& vertices, int tmpMax, int* numFaces)
 {
     int maxValue = tmpMax;
 
-    while (!vertices.empty())
-    {
+    while (!vertices.empty()) {
         //first -> vertex; second -> face;
         node gain = maxGainFace(vertices, numFaces);
         vertices.erase(gain.vertex);
@@ -241,21 +236,20 @@ int main(int argv, char** argc)
     respMax = solve(vertices, respMax, &numFaces);
 
     stop = getTime();
-    
+
     printf("Printing generated graph:\n");
     // Construct the solution given the graph faces
-    for (int i = 0; i < F; ++i)
-    {
+    for (int i = 0; i < F; ++i) {
         int va = tmpFaces[i][0], vb = tmpFaces[i][1], vc = tmpFaces[i][2];
-        if (va == vb && vb == vc) continue;
+        if (va == vb && vb == vc)
+            continue;
         R[va][vb] = R[vb][va] = graph[va][vb];
         R[va][vc] = R[vc][va] = graph[va][vc];
         R[vb][vc] = R[vc][vb] = graph[vb][vc];
     }
     // Print the graph
-    for (int i = 0; i < V; ++i)
-    {
-        for (int j = i+1; j < V; ++j)
+    for (int i = 0; i < V; ++i) {
+        for (int j = i + 1; j < V; ++j)
             printf("%d ", (R[i][j] == -1 ? 0 : R[i][j]));
         printf("\n");
     }
