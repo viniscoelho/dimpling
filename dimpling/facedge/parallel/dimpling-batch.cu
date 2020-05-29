@@ -6,9 +6,9 @@
 #define MB (1 << 20)
 #define GB (1 << 30)
 
+#include "definitions.hpp"
 #include "combinadic.hpp"
 #include "default.hpp"
-#include "definitions.hpp"
 
 using namespace std;
 
