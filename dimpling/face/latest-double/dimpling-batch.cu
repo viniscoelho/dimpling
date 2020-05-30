@@ -8,60 +8,13 @@
 #include <omp.h>
 #include <vector>
 
-#include "combinadic.h"
-#include "default.h"
-
-#define pb push_back
-#define mp make_pair
-
-#define gpuErrChk(ans)                        \
-    {                                         \
-        gpuAssert((ans), __FILE__, __LINE__); \
-    }
-inline void gpuAssert(cudaError_t code, char* file, int line,
-    bool abort = true)
-{
-    if (code != cudaSuccess) {
-        fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code),
-            file, line);
-        if (abort)
-            getchar();
-    }
-}
+#include "default.hpp"
+#include "combinadic.hpp"
 
 using namespace std;
 
-typedef pair<int, int> ii;
-typedef unsigned long long uint64;
-
-#define EPS 1e-9
-
-__device__ int SGN(double a)
-{
-    return ((a > EPS) ? (1) : ((a < -EPS) ? (-1) : (0)));
-}
-__device__ int CMP(double a, double b) { return SGN(a - b); }
-
-int hostSGN(double a) { return ((a > EPS) ? (1) : ((a < -EPS) ? (-1) : (0))); }
-int hostCMP(double a, double b) { return hostSGN(a - b); }
-
-__device__ void AtomicMax(double* const address, const double value)
-{
-    if (*address >= value)
-        return;
-
-    uint64* const address_as_i = (uint64*)address;
-    uint64 old = *address_as_i, assumed;
-
-    do {
-        assumed = old;
-        if (__longlong_as_double(assumed) >= value)
-            break;
-        old = atomicCAS(address_as_i, assumed, __double_as_longlong(value));
-    } while (assumed != old);
-}
-
-/*  Shared Combinadic instance on the GPU
+/*
+    Shared Combinadic instance on the GPU
     */
 __shared__ Combination c;
 
@@ -79,7 +32,8 @@ __device__ void generateList(Node* devN, Params* devP, int t, int offset)
     }
 }
 
-/*  Returns the weight of the initial planar subgraph.
+/*
+    Returns the weight of the initial planar subgraph.
     */
 __device__ void generateTriangularFaceList(Node* devN, Params* devP, double graph[],
     int t, int offset)
@@ -91,14 +45,12 @@ __device__ void generateTriangularFaceList(Node* devN, Params* devP, double grap
 
     int va = seeds[0], vb = seeds[1], vc = seeds[2], vd = seeds[3];
 
-    /*  Generate first triangle of the output graph
-        */
+    // Generate first triangle of the output graph
     devP->F[t + (devP->faces[t] * 3) * perm] = va;
     devP->F[t + (devP->faces[t] * 3 + 1) * perm] = vb;
     devP->F[t + ((devP->faces[t]++) * 3 + 2) * perm] = vc;
 
-    /*  Generate the next 3 possible faces
-        */
+    // Generate the next 3 possible faces
     devP->F[t + (devP->faces[t] * 3) * perm] = va;
     devP->F[t + (devP->faces[t] * 3 + 1) * perm] = vb;
     devP->F[t + ((devP->faces[t]++) * 3 + 2) * perm] = vd;
@@ -117,7 +69,8 @@ __device__ void generateTriangularFaceList(Node* devN, Params* devP, double grap
     devP->tmpMax[t] = resp;
 }
 
-/*  Insert a new vertex, 3 new triangular faces and removes face 'f'
+/*
+    Inserts a new vertex, 3 new triangular faces and removes face 'f'
     from the set.
     */
 __device__ double operationT2(Node* devN, Params* devP, double graph[],
@@ -126,8 +79,7 @@ __device__ double operationT2(Node* devN, Params* devP, double graph[],
     int sz = devN->sz;
     int perm = devN->perm;
 
-    /*  Remove the chosen face and insert a new one
-        */
+    // Remove the chosen face and insert a new one
     int va = devP->F[t + (f * 3) * perm],
         vb = devP->F[t + (f * 3 + 1) * perm],
         vc = devP->F[t + (f * 3 + 2) * perm];
@@ -136,8 +88,7 @@ __device__ double operationT2(Node* devN, Params* devP, double graph[],
                           devP->F[t + (f * 3 + 1) * perm] = va,
                           devP->F[t + (f * 3 + 2) * perm] = vb;
 
-    /*  and insert the other two possible faces.
-        */
+    // and insert the other two possible faces
     devP->F[t + (devP->faces[t] * 3) * perm] = new_vertex;
     devP->F[t + (devP->faces[t] * 3 + 1) * perm] = va;
     devP->F[t + ((devP->faces[t]++) * 3 + 2) * perm] = vc;
@@ -151,7 +102,8 @@ __device__ double operationT2(Node* devN, Params* devP, double graph[],
     return resp;
 }
 
-/*  Return the vertex with the maximum gain inserting within a face 'f'.
+/*
+    Returns the vertex with the maximum gain inserting within a face 'f'.
     */
 __device__ int maxGain(Node* devN, Params* devP, double graph[], int* f, int t)
 {
@@ -160,15 +112,12 @@ __device__ int maxGain(Node* devN, Params* devP, double graph[], int* f, int t)
     double gain = -1.0;
     int vertex = -1;
 
-    /*  Iterate through the remaining vertices
-        */
+    // Iterate through the remaining vertices
     int remain = devP->count[t];
     for (int r = 0; r < remain; r++) {
         int new_vertex = devP->V[t + r * perm];
-        // if (new_vertex == -1) continue;
-        /*  and test which has the maximum gain with its insetion
-            within all possible faces
-            */
+        // and test which has the maximum gain with its insertion
+        // within all possible faces
         int faces = devP->faces[t];
         for (int i = 0; i < faces; i++) {
             int va = devP->F[t + (i * 3) * perm],
@@ -297,8 +246,7 @@ double dimplingPrepare(int sharedOn)
         int64 perm = ((gpu_id + 1) * range > PERM ? PERM - gpu_id * range : range);
         int64 offset = gpu_id * range;
 
-        /*  Create a temporary result variable on the GPU and set its value to -1.
-            */
+        // Create a temporary result variable on the GPU and set its value to -1
         double resp = 0.0, *tmpResp;
         gpuErrChk(cudaMalloc((void**)&tmpResp, sizeof(double)));
         gpuErrChk(cudaMemcpy(tmpResp, &resp, sizeof(double), cudaMemcpyHostToDevice));
@@ -306,24 +254,27 @@ double dimplingPrepare(int sharedOn)
         Node* devN;
         Params devP;
 
-        /*  Create an instance of Node on the GPU and copy the values on the host
-            to it.
-            */
+        // Create an instance of Node on the GPU and copy the values on the host
+        // to it
         gpuErrChk(cudaMalloc((void**)&devN, sizeof(Node)));
         gpuErrChk(cudaMemcpy(devN, N, sizeof(Node), cudaMemcpyHostToDevice));
 
-        /*  Calculate the required amount of space to run the instance on the GPU.
-            */
+        // Calculate the required amount of space to run the instance on the GPU
         size_t sz_node = sizeof(double) * MAX_S + sizeof(int) * 6 * MAX + sizeof(int) * 2;
         size_t sz_prm = range * sizeof(int) * 2 + range * sizeof(double) + range * sizeof(int) * (7 * SIZE);
 
-        // printf("Using %d mbytes in Kernel %d\n", (sz_node + sz_prm) / (1 << 20), gpu_id);
-        fprintf(stderr, "Using %d mbytes on Kernel %d\n", (sz_node + sz_prm) / (1 << 20), gpu_id);
+        if ((sz_graph + sz_prm) / MB > (1 << 10) {
+            printf("Using %d GBytes on GPU %d\n", (sz_graph + sz_prm) / GB, gpu_id + 1);
+        } else {
+            printf("Using %d MBytes on GPU %d\n", (sz_graph + sz_prm) / MB, gpu_id + 1);
+        }
 
         size_t cuInfo = 0, cuTotal = 0;
         gpuErrChk(cudaMemGetInfo(&cuInfo, &cuTotal));
         cuInfo *= 0.95;
-        printf("Free memory: %d mbytes\nTotal memory: %d mbytes\n", cuInfo / (1 << 20), cuTotal / (1 << 20));
+        printf("Free memory: %d MBytes\n"
+            "Total memory: %d MBytes\n",
+            cuInfo / MB, cuTotal / MB);
 
         /*  BATCH_CNT       ---> Number of calls to the kernel for each GPU
             it_range        ---> Range of the seeds in the batch
@@ -343,8 +294,6 @@ double dimplingPrepare(int sharedOn)
         gpuErrChk(cudaMalloc((void**)&devP.F, 6 * SIZE * it_range * sizeof(int)));
         gpuErrChk(cudaMalloc((void**)&devP.V, SIZE * it_range * sizeof(int)));
 
-        // printf("Kernel %d launched with %lld blocks, each w/ %d threads\n", gpu_id+1,
-        // it_range / THREADS+1, THREADS);
         fprintf(stderr, "Kernel %d launched with %d blocks, each w/ %d threads\n",
             gpu_id + 1, it_range / THREADS + 1, THREADS);
 
@@ -364,30 +313,27 @@ double dimplingPrepare(int sharedOn)
                 gpuErrChk(cudaDeviceSynchronize());
             }
 
-            /*  Copy the maximum weight found.
-                */
+            // Copy the maximum weight found
             gpuErrChk(cudaMemcpy(&resp, tmpResp, sizeof(double), cudaMemcpyDeviceToHost));
 
-            /*  The result obtained by each GPU will only be copied if its value is higher
-                than the current one.
-                */
+            // The result obtained by each GPU will only be copied if its value is higher
+            // than the current one
             printf("Kernel finished with local maximum %.3lf. Copying results...\n", resp);
 
-#pragma omp barrier
-            {
+            // Warning: possible deadlock if another application uses too much
+            // resource from a GPU
+            // #pragma omp barrier
 #pragma omp critical
-                {
-                    if (hostCMP(resp, finalResp) == 1) {
-                        finalResp = resp;
-                        pos = gpu_id;
-                    }
+            {
+                if (hostCMP(resp, finalResp) == 1) {
+                    finalResp = resp;
+                    pos = gpu_id;
                 }
             }
 
-            if (pos == gpu_id) {
+            if (pos == gpu_id)
                 gpuErrChk(cudaMemcpy(&F, devN->F_ANS, 6 * MAX * sizeof(int),
                     cudaMemcpyDeviceToHost));
-            }
         }
 
         printf("Freeing memory...\n");
@@ -407,9 +353,8 @@ double dimplingPrepare(int sharedOn)
 int main(int argv, char** argc)
 {
     sizeDefinitions();
-    /*  Read the input, which is given by a size of a graph and its weighted
-        edges. The given graph is dense.
-        */
+    // Read the input, which is given by the size of a graph and its weighted
+    // edges. The given graph should be a complete graph
     readInput();
     initialize();
 
@@ -425,8 +370,14 @@ int main(int argv, char** argc)
         if (GPU_CNT > d)
             GPU_CNT = d;
     } else {
-        cout << "ERROR! Minimum num. of arguments: 1\n"
-                "Try:\nsimple gpu - ./a.out gpu_id\nmulti-gpu  - ./a.out sharedOnOff num_gpus\n";
+        printf("ERROR! Minimum num. of arguments: 1\n"
+            "Usage:\n"
+            "single gpu - ./a.out gpu_id\n"
+            "multi-gpu  - ./a.out sharedOnOff num_gpus\n"
+            "examples:\n"
+            "  ./a.out 0\n"
+            "  ./a.out 1 1\n"
+            "  ./a.out 1 4\n");
         return 0;
     }
 
@@ -434,11 +385,10 @@ int main(int argv, char** argc)
     double respMax = dimplingPrepare(sharedOn);
     double stop = getTime();
 
-    /*  Reconstruct the graph given the faces of the graph
-        */
+    // Reconstruct the graph given the faces of the graph
     for (int i = 0; i < 2 * SIZE; i++) {
         int va = F[i * 3], vb = F[i * 3 + 1], vc = F[i * 3 + 2];
-        //outbounds verification
+        // Outbounds verification
         if (va == vb && vb == vc)
             continue;
         R[va * SIZE + vb] = R[vb * SIZE + va] = N->graph[va * SIZE + vb];
@@ -446,7 +396,7 @@ int main(int argv, char** argc)
         R[vb * SIZE + vc] = R[vc * SIZE + vb] = N->graph[vb * SIZE + vc];
     }
 
-    cout << "Printing generated graph: " << endl;
+    printf("Printing generated graph:\n");
     for (int i = 0; i < SIZE; i++) {
         for (int j = i + 1; j < SIZE; j++) {
             printf("%lf ", (R[i * SIZE + j] == -1 ? 0 : R[i * SIZE + j]));

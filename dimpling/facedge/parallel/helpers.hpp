@@ -1,5 +1,5 @@
-#ifndef DEFAULT_H
-#define DEFAULT_H
+#ifndef HELPERS_HPP
+#define HELPERS_HPP
 #endif
 
 // Mac OSX
@@ -13,7 +13,7 @@ int sgn(double a) { return ((a > EPS) ? (1) : ((a < -EPS) ? (-1) : (0))); }
 int cmp(double a, double b = 0.0) { return sgn(a - b); }
 
 /*
-    Print elapsed time.
+    Prints elapsed time.
     */
 void printElapsedTime(double start, double stop)
 {
@@ -26,7 +26,7 @@ void printElapsedTime(double start, double stop)
 //-----------------------------------------------------------------------------
 
 /*  
-    Get clock time.
+    Gets clock time.
     */
 void current_utc_time(struct timespec *ts) 
 {
@@ -89,7 +89,7 @@ void readInput()
 //-----------------------------------------------------------------------------
 
 /*
-    Define the number of combinations.
+    Defines the number of combinations.
     */
 void sizeDefinitions()
 {

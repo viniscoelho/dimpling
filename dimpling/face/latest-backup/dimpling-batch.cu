@@ -5,23 +5,8 @@
 #include <omp.h>
 #define MB (1 << 20)
 
+#include "helpers.hpp"
 #include "combinadic.hpp"
-#include "default.hpp"
-
-#define gpuErrChk(ans)                        \
-    {                                         \
-        gpuAssert((ans), __FILE__, __LINE__); \
-    }
-inline void gpuAssert(cudaError_t code, char* file, int line,
-    bool abort = true)
-{
-    if (code != cudaSuccess) {
-        fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code),
-            file, line);
-        if (abort)
-            getchar();
-    }
-}
 
 using namespace std;
 
@@ -100,7 +85,7 @@ __device__ int faceDimple(Graph* devG, Params* devP, int graph[],
     int range = devG->range;
     int numFaces = devP->numFaces[t];
 
-    // Remove the chosen face and insert a new one on its place.
+    // Remove the chosen face and insert a new one on its place
     int va = devP->F[t + (f * 3) * range],
         vb = devP->F[t + (f * 3 + 1) * range],
         vc = devP->F[t + (f * 3 + 2) * range];
@@ -109,7 +94,7 @@ __device__ int faceDimple(Graph* devG, Params* devP, int graph[],
                           devP->F[t + (f * 3 + 1) * range] = va,
                           devP->F[t + (f * 3 + 2) * range] = vb;
 
-    // Insert the other two new faces.
+    // Insert the other two new faces
     devP->F[t + (numFaces * 3) * range] = new_vertex;
     devP->F[t + (numFaces * 3 + 1) * range] = va;
     devP->F[t + ((numFaces++) * 3 + 2) * range] = vc;
@@ -164,16 +149,16 @@ __device__ void dimpling(Graph* devG, Params* devP, int graph[], int t)
     int range = devG->range;
 
     while (devP->remaining[t]) {
-        //Last position of the list of vertices
+        // Last position of the list of vertices
         int last = devP->remaining[t] - 1;
         int f = -1;
-        //Index of the vertex which will be removed
+        // Index of the vertex which will be removed
         int vertex_idx = maxGainFace(devG, devP, graph, &f, t);
-        //The vertex which will be removed.
+        // The vertex which will be removed
         int vertex = devP->V[t + vertex_idx * range];
         devP->tmpMax[t] += faceDimple(devG, devP, graph, vertex, f, t);
 
-        //Compress the list of vertices and remove the chosen vertex
+        // Compress the list of vertices and remove the chosen vertex
         for (int i = vertex_idx; i <= last; ++i)
             devP->V[t + i * range] = devP->V[t + (i + 1) * range];
         devP->remaining[t]--;
@@ -278,11 +263,11 @@ int prepareEnvironment(int sharedOn)
             comb    ---> Number of seeds divided between the GPUs
             offset  ---> Offset for each GPU
             */
-        int range = (int)ceil(COMB / (double)GPU_CNT);
-        int comb = ((gpu_id + 1) * range > COMB ? COMB - gpu_id * range : range);
+        int64 range = (int)ceil(COMB / (double)GPU_CNT);
+        int64 comb = ((gpu_id + 1) * range > COMB ? COMB - gpu_id * range : range);
         int offset = gpu_id * range;
 
-        // Create a temporary result variable on the GPU and set its value to -1.
+        // Create a temporary result variable on the GPU and set its value to -1
         int resp = -1, *tmpResp;
         gpuErrChk(cudaMalloc((void**)&tmpResp, sizeof(int)));
         gpuErrChk(cudaMemcpy(tmpResp, &resp, sizeof(int),
@@ -292,16 +277,19 @@ int prepareEnvironment(int sharedOn)
         Params devP;
 
         // Create an instance of Graph on the GPU and copy the values on the host
-        // to it.
+        // to it
         gpuErrChk(cudaMalloc((void**)&devG, sizeof(Graph)));
         gpuErrChk(cudaMemcpy(devG, G, sizeof(Graph), cudaMemcpyHostToDevice));
 
-        // Calculate the required amount of space to run the instance on the GPU.
+        // Calculate the required amount of space to run the instance on the GPU
         size_t sz_graph = sizeof(int) * MAXS + sizeof(int) * 6 * MAXV;
         size_t sz_prm = range * sizeof(int) * 3 + range * sizeof(int) * (7 * SIZE);
 
-        fprintf(stderr, "Using %d MBytes on GPU %d\n",
-            (sz_graph + sz_prm) / MB, gpu_id + 1);
+        if ((sz_graph + sz_prm) / MB > (1 << 10) {
+            printf("Using %d GBytes on GPU %d\n", (sz_graph + sz_prm) / GB, gpu_id + 1);
+        } else {
+            printf("Using %d MBytes on GPU %d\n", (sz_graph + sz_prm) / MB, gpu_id + 1);
+        }
 
         /*
             BATCH_CNT   ---> Number of calls to the kernel for each GPU
@@ -312,7 +300,8 @@ int prepareEnvironment(int sharedOn)
         size_t cuInfo = 0, cuTotal = 0;
         gpuErrChk(cudaMemGetInfo(&cuInfo, &cuTotal));
         cuInfo *= 0.95;
-        printf("Free memory: %d MBytes\nTotal memory: %d mbytes\n",
+        printf("Free memory: %d MBytes\n
+            Total memory: %d MBytes\n",
             cuInfo / MB, cuTotal / MB);
 
         int BATCH_CNT = (int)ceil(sz_prm / (double)cuInfo);
@@ -320,7 +309,7 @@ int prepareEnvironment(int sharedOn)
         int it_comb, it_offset;
         printf("Required num. of iterations: %d\n", BATCH_CNT);
 
-        // Reserve the require amount of space for each variable on Params.
+        // Reserve the require amount of space for each variable on Params
         gpuErrChk(cudaMalloc((void**)&devP.tmpMax, it_range * sizeof(int)));
         gpuErrChk(cudaMalloc((void**)&devP.numFaces, it_range * sizeof(int)));
         gpuErrChk(cudaMalloc((void**)&devP.remaining, it_range * sizeof(int)));
@@ -348,12 +337,12 @@ int prepareEnvironment(int sharedOn)
                 gpuErrChk(cudaDeviceSynchronize());
             }
 
-            // Copy the maximum weight found.
+            // Copy the maximum weight found
             gpuErrChk(cudaMemcpy(&resp, tmpResp, sizeof(int),
                 cudaMemcpyDeviceToHost));
 
             // The result obtained by each GPU will only be copied if its value
-            // is higher than the best one.
+            // is higher than the best one
             printf("Iteration num. %d completed!\n"
                    "Kernel %d finished with local maximum %d\n"
                    "Copying results...\n",
@@ -362,7 +351,6 @@ int prepareEnvironment(int sharedOn)
             // Warning: possible deadlock if another application uses too much
             // resource from a GPU
             // #pragma omp barrier
-            // {
 #pragma omp critical
             {
                 if (resp > finalResp) {
@@ -370,7 +358,6 @@ int prepareEnvironment(int sharedOn)
                     pos = gpu_id;
                 }
             }
-            // }
 
             if (pos == gpu_id)
                 gpuErrChk(cudaMemcpy(&F, devG->resFaces, 6 * SIZE * sizeof(int),
@@ -397,12 +384,12 @@ int main(int argv, char** argc)
 {
     int sharedOn = 0;
 
-    // Turn shared memory on and set which GPU to use.
+    // Turn shared memory on and set which GPU to use
     if (argv == 2) {
         sharedOn = 1;
         cudaSetDevice(atoi(argc[1]));
     }
-    // Turn shared memory on/off and set how many GPUs to use.
+    // Turn shared memory on/off and set how many GPUs to use
     else if (argv == 3) {
         sharedOn = atoi(argc[1]);
         GPU_CNT = atoi(argc[2]);
@@ -411,15 +398,20 @@ int main(int argv, char** argc)
         if (GPU_CNT > d)
             GPU_CNT = d;
     } else {
-        printf("ERROR! Minimum num. of arguments: 1\n");
-        printf("Try:\nsingle gpu - ./a.out gpu_id\n");
-        printf("multi-gpu  - ./a.out sharedOnOff num_gpus\n");
+        printf("ERROR! Minimum num. of arguments: 1\n"
+            "Usage:\n"
+            "single gpu - ./a.out gpu_id\n"
+            "multi-gpu  - ./a.out sharedOnOff num_gpus\n"
+            "examples:\n"
+            "  ./a.out 0\n"
+            "  ./a.out 1 1\n"
+            "  ./a.out 1 4\n");
         return 0;
     }
 
     sizeDefinitions();
     // Read the input, which is given by the size of a graph and its weighted
-    // edges. The given graph should be a complete graph.
+    // edges. The given graph should be a complete graph
     readInput();
 
     double start = getTime();
@@ -429,6 +421,7 @@ int main(int argv, char** argc)
     // Construct the solution given the graph faces
     for (int i = 0; i <= FACES; ++i) {
         int va = F[i * 3], vb = F[i * 3 + 1], vc = F[i * 3 + 2];
+        // Outbounds verification
         if (va == vb && vb == vc)
             continue;
         resGraph[va * SIZE + vb] = resGraph[vb * SIZE + va] = G->graph[va * SIZE + vb];

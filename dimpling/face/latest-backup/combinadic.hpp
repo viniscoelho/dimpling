@@ -1,5 +1,5 @@
-#ifndef COMBINADIC_H
-#define COMBINADIC_H
+#ifndef COMBINADIC_HPP
+#define COMBINADIC_HPP
 #endif
 
 __device__ class Combination
@@ -47,17 +47,20 @@ public:
             printf("Invalid negative parameter in choose()\n");
             return -1;
         }
-        if (n < k) return 0;  // special case
+        // special case
+        if (n < k) return 0;
         if (n == k) return 1;
 
         int64 delta, iMax;
 
-        if (k < n-k) // ex: choose(100, 3)
+        // ex: choose(100, 3)
+        if (k < n-k)
         {
             delta = n-k;
             iMax = k;
         }
-        else         // ex: choose(100, 97)
+        // ex: choose(100, 97)
+        else
         {
             delta = k;
             iMax = n-k;
@@ -66,7 +69,7 @@ public:
         int64 ans = delta + 1;
 
         for (int64 i = 2; i <= iMax; ++i)
-            ans = (ans * (delta + i)) / i; 
+            ans = (ans * (delta + i)) / i;
 
         return ans;
     }
@@ -88,11 +91,13 @@ __device__ bool Combination::isValid()
     for (int i = 0; i < k; ++i)
     {
         if (data[i] < 0 || data[i] > n - 1)
-            return false; // value out of range
+            // value out of range
+            return false;
 
         for (int j = i+1; j < k; ++j)
             if (data[i] >= data[j])
-                return false; // duplicate or not lexicographic
+                // duplicate or not lexicographic
+                return false;
     }
 
     return true;
@@ -100,14 +105,13 @@ __device__ bool Combination::isValid()
 
 //-----------------------------------------------------------------------------
 
-/* 
-    Return the largest value 'v' where 'v < a' and 'choose(v, b) <= x'
+/*
+    Return the largest value 'v' where 'v < a' and 'choose(v, b) <= x'.
     */
 __device__ int64 Combination::largestV(int a, int b, int64 x)
 {
     int v = a - 1;
     while (choose(v, b) > x) --v;
-
     return v;
 }
 
@@ -139,7 +143,7 @@ __device__ Combination Combination::successor()
 //-----------------------------------------------------------------------------
 
 /*
-    Returns the m-th lexicographic element of combination C(n, k)
+    Returns the m-th lexicographic element of combination C(n, k).
     */
 __device__ Combination Combination::element(int64 m)
 {
@@ -147,11 +151,13 @@ __device__ Combination Combination::element(int64 m)
 
     int a = n;
     int b = k;
-    int64 x = (choose(n, k) - 1) - m; // x is the "dual" of m
+    // x is the "dual" of m
+    int64 x = (choose(n, k) - 1) - m;
 
     for (int i = 0; i < k; ++i)
     {
-        ans[i] = largestV(a, b, x); // largest value v, where v < a and vCb < x    
+        // largest value v, where v < a and vCb < x
+        ans[i] = largestV(a, b, x);
         x = x - choose(ans[i], b);
         a = ans[i];
         b = b-1;
@@ -166,7 +172,7 @@ __device__ Combination Combination::element(int64 m)
 //-----------------------------------------------------------------------------
 
 /*
-    Returns the combined array
+    Returns the combined array.
     */
 __device__ int* Combination::getArray()
 {

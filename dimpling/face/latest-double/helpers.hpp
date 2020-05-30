@@ -1,12 +1,30 @@
-#ifndef DEFAULT_H
-    #define DEFAULT_H
+#ifndef HELPERS_HPP
+    #define HELPERS_HPP
     typedef long long int64;
+    typedef unsigned long long uint64;
 #endif
 
-#define C 4
-#define THREADS 1024 // num of threads (set to 2^10)
-#define MAX 200LL // num. of vertices
-#define MAX_S MAX*MAX // dimension of the matrix
+#define EPS 1e-9
+
+#define gpuErrChk(ans)                        \
+    {                                         \
+        gpuAssert((ans), __FILE__, __LINE__); \
+    }
+inline void gpuAssert(cudaError_t code, char* file, int line,
+    bool abort = true)
+{
+    if (code != cudaSuccess) {
+        fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code),
+            file, line);
+        if (abort)
+            getchar();
+    }
+}
+
+const int C = 4; // size of the combination
+const int THREADS = 1024; // num of threads (set to 2^10)
+const int MAX = 200; //max number of vertices
+const int MAX_S = MAX*MAX; // dimension of the matrix
 
 /*  perm        ---> Number of permutations of an instance
     sz          ---> Adjacency matrix dimension (1D)
@@ -49,14 +67,14 @@ int F[6 * MAX];
 
 Node *N;
 
-/*  Print elapsed time.
+/*  Prints elapsed time.
     */
 void printElapsedTime(double start, double stop){
     double elapsed = stop - start;
     printf("Elapsed time: %.3lfs.\n", elapsed);
 }
 
-/*  Get clock time.
+/*  Gets clock time.
     */
 double getTime(){
      timespec ts;
@@ -67,7 +85,6 @@ double getTime(){
 void initialize(){
     for (int i = 0; i < SIZE-1; i++){
         for (int j = i+1; j < SIZE; j++){
-            //R[i][j] = R[j][i]
             R[i*SIZE + j] = R[j*SIZE + i] = 0.0;
         }
     }
@@ -90,7 +107,7 @@ void readInput(){
     }
 }
 
-/*  Define the number of permutations and blocks
+/*  Defines the number of permutations and blocks.
     */
 void sizeDefinitions(){
     for (int i = 4; i <= MAX; i++){
@@ -99,4 +116,29 @@ void sizeDefinitions(){
         resp /= 24;
         bib[i-1] = resp;
     }
+}
+
+__device__ int SGN(double a)
+{
+    return ((a > EPS) ? (1) : ((a < -EPS) ? (-1) : (0)));
+}
+__device__ int CMP(double a, double b) { return SGN(a - b); }
+
+int hostSGN(double a) { return ((a > EPS) ? (1) : ((a < -EPS) ? (-1) : (0))); }
+int hostCMP(double a, double b) { return hostSGN(a - b); }
+
+__device__ void AtomicMax(double* const address, const double value)
+{
+    if (*address >= value)
+        return;
+
+    uint64* const address_as_i = (uint64*)address;
+    uint64 old = *address_as_i, assumed;
+
+    do {
+        assumed = old;
+        if (__longlong_as_double(assumed) >= value)
+            break;
+        old = atomicCAS(address_as_i, assumed, __double_as_longlong(value));
+    } while (assumed != old);
 }

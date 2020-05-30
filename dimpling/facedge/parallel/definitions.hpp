@@ -1,8 +1,6 @@
-#ifndef DEFINITIONS_H
-#define DEFINITIONS_H
+#ifndef DEFINITIONS_HPP
+#define DEFINITIONS_HPP
 #endif
-
-// registers*num_threads*num_blocks < 32k or 64k
 
 #define gpuErrChk(ans){ gpuAssert((ans), __FILE__, __LINE__); }
 inline void gpuAssert(cudaError_t code, char *file, int line,
@@ -73,8 +71,8 @@ __device__ struct edge
 __device__ class HashBucket
 {
 private:
-    //for 200 vertices: (200*200)/62
-    //for 150 vertices: (150*150)/62
+    // for 200 vertices: (200*200)/62
+    // for 150 vertices: (150*150)/62
     uint64 h[220];
 
 public:

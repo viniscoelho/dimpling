@@ -1,5 +1,7 @@
-#ifndef DEFAULT_H
-#define DEFAULT_H
+#ifndef HELPERS_HPP
+    #define HELPERS_HPP
+    typedef long long int64;
+    typedef unsigned long long uint64;
 #endif
 
 // Mac OSX
@@ -8,15 +10,29 @@
 #include <mach/mach.h>
 #endif
 
-typedef int Face;
-typedef long long int64;
+#define gpuErrChk(ans)                        \
+    {                                         \
+        gpuAssert((ans), __FILE__, __LINE__); \
+    }
+inline void gpuAssert(cudaError_t code, char* file, int line,
+    bool abort = true)
+{
+    if (code != cudaSuccess) {
+        fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code),
+            file, line);
+        if (abort)
+            getchar();
+    }
+}
 
-const int C = 4; //size of the combination
+typedef int Face;
+
+const int C = 4; // size of the combination
 const int THREADS = 1024; // num of threads (set to 2^10)
 const int MAXV = 400; //max number of vertices
 const int MAXS = MAXV*MAXV; // dimension of the matrix
-const int MAXF = 2*MAXV-4; //upper-bound of regions on a planar graph
-const int MAXE = MAXV*(MAXV-1)/2; //number of undirected edges
+const int MAXF = 2*MAXV-4; // upper-bound of regions on a planar graph
+const int MAXE = MAXV*(MAXV-1)/2; // number of undirected edges
 
 /*
     range       ---> Number of combinations of an instance
@@ -64,7 +80,7 @@ int resGraph[MAXS], F[6*MAXV];
 Graph *G;
 
 /*
-    Print elapsed time.
+    Prints elapsed time.
     */
 void printElapsedTime(double start, double stop)
 {
@@ -75,11 +91,12 @@ void printElapsedTime(double start, double stop)
 //-----------------------------------------------------------------------------
 
 /*  
-    Get clock time.
+    Gets clock time.
     */
 void current_utc_time(struct timespec *ts) 
 {
-    #ifdef __MACH__ // OS X does not have clock_gettime, use clock_get_time
+    // OS X does not have clock_gettime, use clock_get_time
+    #ifdef __MACH__
         clock_serv_t cclock;
         mach_timespec_t mts;
         host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
@@ -135,7 +152,7 @@ void readInput()
 //-----------------------------------------------------------------------------
 
 /*
-    Define the number of combinations.
+    Defines the number of combinations.
     */
 void sizeDefinitions()
 {
