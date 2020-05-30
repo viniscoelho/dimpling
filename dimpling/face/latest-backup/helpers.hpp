@@ -1,7 +1,5 @@
 #ifndef HELPERS_HPP
-    #define HELPERS_HPP
-    typedef long long int64;
-    typedef unsigned long long uint64;
+#define HELPERS_HPP
 #endif
 
 // Mac OSX
@@ -10,29 +8,28 @@
 #include <mach/mach.h>
 #endif
 
-#define gpuErrChk(ans)                        \
-    {                                         \
-        gpuAssert((ans), __FILE__, __LINE__); \
-    }
-inline void gpuAssert(cudaError_t code, char* file, int line,
+#define gpuErrChk(ans){ gpuAssert((ans), __FILE__, __LINE__); }
+inline void gpuAssert(cudaError_t code, char *file, int line,
     bool abort = true)
 {
-    if (code != cudaSuccess) {
+    if (code != cudaSuccess)
+    {
         fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code),
             file, line);
-        if (abort)
-            getchar();
+        if (abort) getchar();
     }
 }
 
 typedef int Face;
+typedef long long int64;
+typedef unsigned long long uint64;
 
-const int C = 4; // size of the combination
-const int THREADS = 1024; // num of threads (set to 2^10)
-const int MAXV = 400; //max number of vertices
-const int MAXS = MAXV*MAXV; // dimension of the matrix
-const int MAXF = 2*MAXV-4; // upper-bound of regions on a planar graph
-const int MAXE = MAXV*(MAXV-1)/2; // number of undirected edges
+const int C = 4, // size of the combination
+    THREADS = 1024, // num of threads (set to 2^10)
+    MAXV = 200, // max number of vertices
+    MAXS = MAXV*MAXV, // dimension of the matrix
+    MAXF = 2*MAXV-4, // upper-bound of regions on a planar graph
+    MAXE = MAXV*(MAXV-1)/2; // number of undirected edges
 
 /*
     range       ---> Number of combinations of an instance
@@ -136,6 +133,10 @@ void readInput()
 {
     int value;
     scanf("%d", &SIZE);
+    if (SIZE > MAXV) {
+        printf("ERROR: Number of vertices (%d) exceeds the maximum allowed (%d)\n", SIZE, MAXV);
+        exit(EXIT_FAILURE);
+    }
 
     G = (Graph*)malloc(sizeof(Graph));
     G->length = SIZE;

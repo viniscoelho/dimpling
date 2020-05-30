@@ -8,7 +8,6 @@
 #include <mach/mach.h>
 #endif
 
-const double EPS = 1e-9;
 int sgn(double a) { return ((a > EPS) ? (1) : ((a < -EPS) ? (-1) : (0))); }
 int cmp(double a, double b = 0.0) { return sgn(a - b); }
 
@@ -30,7 +29,8 @@ void printElapsedTime(double start, double stop)
     */
 void current_utc_time(struct timespec *ts) 
 {
-    #ifdef __MACH__ // OS X does not have clock_gettime, use clock_get_time
+    // OS X does not have clock_gettime, use clock_get_time
+    #ifdef __MACH__
         clock_serv_t cclock;
         mach_timespec_t mts;
         host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
@@ -70,6 +70,10 @@ void readInput()
 {
     int value;
     scanf("%d", &SIZE);
+    if (SIZE > MAXV) {
+        printf("ERROR: Number of vertices (%d) exceeds the maximum allowed (%d)\n", SIZE, MAXV);
+        exit(EXIT_FAILURE);
+    }
     COMB = numComb[SIZE-1];
 
     G = (Graph*)malloc(sizeof(Graph));

@@ -17,17 +17,18 @@ inline void gpuAssert(cudaError_t code, char *file, int line,
 typedef int Face;
 typedef long long int64;
 typedef unsigned long long uint64;
-typedef int Face;
 
-const int C = 4; // combination size
-const int THREADS = 1024; // number of threads (default: 2^10)
-const int MAXV = 150; // max. number of vertices
-const int MAXS = MAXV*MAXV; // matrix dimension
-const int MAXF = 2*MAXV-4; // number of regions on a planar graph
-const int MAXE = MAXV*(MAXV-1)/2; // number of edges
-const int NUM_F_EDGE = 2; //number of faces that each edge belongs to
-const int NUM_E_FACE = 3; //number of edges that each face has
-const int NUM_V_FACE = 3; //number of vertices that each face has
+const double EPS = 1e-9;
+
+const int C = 4, // combination size
+    THREADS = 1024, // number of threads (default: 2^10)
+    MAXV = 200, // max. number of vertices
+    MAXS = MAXV*MAXV, // matrix dimension
+    MAXF = 2*MAXV-4, // number of regions on a planar graph
+    MAXE = MAXV*(MAXV-1)/2, // number of edges
+    NUM_F_EDGE = 2, // number of faces that each edge belongs to
+    NUM_E_FACE = 3, // number of edges that each face has
+    NUM_V_FACE = 3; // number of vertices that each face has
 
 //-----------------------------------------------------------------------------
 

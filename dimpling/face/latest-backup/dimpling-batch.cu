@@ -3,7 +3,9 @@
 #include <cstdlib>
 #include <cuda_runtime.h>
 #include <omp.h>
-#define MB (1 << 20)
+
+#define MB (1LL << 20)
+#define GB (1LL << 30)
 
 #include "helpers.hpp"
 #include "combinadic.hpp"
@@ -276,19 +278,15 @@ int prepareEnvironment(int sharedOn)
         Graph* devG;
         Params devP;
 
-        // Create an instance of Graph on the GPU and copy the values on the host
-        // to it
-        gpuErrChk(cudaMalloc((void**)&devG, sizeof(Graph)));
-        gpuErrChk(cudaMemcpy(devG, G, sizeof(Graph), cudaMemcpyHostToDevice));
-
         // Calculate the required amount of space to run the instance on the GPU
-        size_t sz_graph = sizeof(int) * MAXS + sizeof(int) * 6 * MAXV;
-        size_t sz_prm = range * sizeof(int) * 3 + range * sizeof(int) * (7 * SIZE);
+        int64 sz_graph = sizeof(int) * MAXS + sizeof(int) * 6 * MAXV;
+        int64 sz_prm = range * sizeof(int) * 3 + range * sizeof(int) * (7 * SIZE);
+        int64 sz_total = sz_graph + sz_prm;
 
-        if ((sz_graph + sz_prm) / MB > (1 << 10)) {
-            printf("Using %d GBytes on GPU %d\n", (sz_graph + sz_prm) / GB, gpu_id + 1);
+        if (sz_total / MB > (1 << 10)) {
+            printf("Using %lld GBytes on GPU %d\n", sz_total / GB, gpu_id + 1);
         } else {
-            printf("Using %d MBytes on GPU %d\n", (sz_graph + sz_prm) / MB, gpu_id + 1);
+            printf("Using %lld MBytes on GPU %d\n", sz_total / MB, gpu_id + 1);
         }
 
         /*
@@ -299,15 +297,20 @@ int prepareEnvironment(int sharedOn)
             */
         size_t cuInfo = 0, cuTotal = 0;
         gpuErrChk(cudaMemGetInfo(&cuInfo, &cuTotal));
-        cuInfo *= 0.95;
-        printf("Free memory: %d MBytes\n
-            Total memory: %d MBytes\n",
+        cuInfo *= 0.90;
+        printf("Free memory: %d MBytes\n"
+            "Total memory: %d MBytes\n",
             cuInfo / MB, cuTotal / MB);
 
-        int BATCH_CNT = (int)ceil(sz_prm / (double)cuInfo);
+        int BATCH_CNT = (int)ceil(sz_total / (double)cuInfo);
         int it_range = (int)ceil(comb / (double)BATCH_CNT);
         int it_comb, it_offset;
-        printf("Required num. of iterations: %d\n", BATCH_CNT);
+        printf("Required no. of iterations: %d\n", BATCH_CNT);
+
+        // Create an instance of Graph on the GPU and copy the values on the host
+        // to it
+        gpuErrChk(cudaMalloc((void**)&devG, sizeof(Graph)));
+        gpuErrChk(cudaMemcpy(devG, G, sizeof(Graph), cudaMemcpyHostToDevice));
 
         // Reserve the require amount of space for each variable on Params
         gpuErrChk(cudaMalloc((void**)&devP.tmpMax, it_range * sizeof(int)));
@@ -316,7 +319,7 @@ int prepareEnvironment(int sharedOn)
         gpuErrChk(cudaMalloc((void**)&devP.F, 6 * SIZE * it_range * sizeof(int)));
         gpuErrChk(cudaMalloc((void**)&devP.V, SIZE * it_range * sizeof(int)));
 
-        fprintf(stderr, "Kernel %d launched with %d blocks, each w/ %d threads\n",
+        fprintf(stderr, "Kernel %d launched with %d blocks, each w/ %d threads...\n",
             gpu_id + 1, it_range / THREADS + 1, THREADS);
 
         for (int btch_id = 0; btch_id < BATCH_CNT; ++btch_id) {
@@ -343,7 +346,7 @@ int prepareEnvironment(int sharedOn)
 
             // The result obtained by each GPU will only be copied if its value
             // is higher than the best one
-            printf("Iteration num. %d completed!\n"
+            printf("Iteration no. %d completed!\n"
                    "Kernel %d finished with local maximum %d\n"
                    "Copying results...\n",
                 btch_id + 1, gpu_id + 1, resp);
@@ -398,10 +401,10 @@ int main(int argv, char** argc)
         if (GPU_CNT > d)
             GPU_CNT = d;
     } else {
-        printf("ERROR! Minimum num. of arguments: 1\n"
+        printf("Minimum no. of arguments: 1\n"
             "Usage:\n"
-            "single gpu - ./a.out gpu_id\n"
-            "multi-gpu  - ./a.out sharedOnOff num_gpus\n"
+            "  single gpu - ./a.out gpu_id\n"
+            "  multi-gpu  - ./a.out sharedOnOff num_gpus\n"
             "examples:\n"
             "  ./a.out 0\n"
             "  ./a.out 1 1\n"

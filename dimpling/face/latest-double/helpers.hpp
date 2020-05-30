@@ -1,30 +1,28 @@
 #ifndef HELPERS_HPP
-    #define HELPERS_HPP
-    typedef long long int64;
-    typedef unsigned long long uint64;
+#define HELPERS_HPP
 #endif
 
-#define EPS 1e-9
-
-#define gpuErrChk(ans)                        \
-    {                                         \
-        gpuAssert((ans), __FILE__, __LINE__); \
-    }
-inline void gpuAssert(cudaError_t code, char* file, int line,
+#define gpuErrChk(ans){ gpuAssert((ans), __FILE__, __LINE__); }
+inline void gpuAssert(cudaError_t code, char *file, int line,
     bool abort = true)
 {
-    if (code != cudaSuccess) {
+    if (code != cudaSuccess)
+    {
         fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code),
             file, line);
-        if (abort)
-            getchar();
+        if (abort) getchar();
     }
 }
 
-const int C = 4; // size of the combination
-const int THREADS = 1024; // num of threads (set to 2^10)
-const int MAX = 200; //max number of vertices
-const int MAX_S = MAX*MAX; // dimension of the matrix
+typedef long long int64;
+typedef unsigned long long uint64;
+
+const double EPS = 1e-9;
+
+const int C = 4, // size of the combination
+    THREADS = 1024, // num of threads (set to 2^10)
+    MAX = 200, // max number of vertices
+    MAX_S = MAX*MAX; // dimension of the matrix
 
 /*  perm        ---> Number of permutations of an instance
     sz          ---> Adjacency matrix dimension (1D)
@@ -93,6 +91,10 @@ void initialize(){
 void readInput(){
     double x;
     scanf("%d", &SIZE);
+        if (SIZE > MAX) {
+        printf("ERROR: Number of vertices (%d) exceeds the maximum allowed (%d)\n", SIZE, MAX);
+        exit(EXIT_FAILURE);
+    }
     PERM = bib[SIZE-1];
 
     N = (Node*)malloc(sizeof(Node));

@@ -8,6 +8,9 @@
 #include <omp.h>
 #include <vector>
 
+#define MB (1LL << 20)
+#define GB (1LL << 30)
+
 #include "helpers.hpp"
 #include "combinadic.hpp"
 
@@ -244,7 +247,7 @@ double dimplingPrepare(int sharedOn)
             */
         int64 range = (int)ceil(PERM / (double)GPU_CNT);
         int64 perm = ((gpu_id + 1) * range > PERM ? PERM - gpu_id * range : range);
-        int64 offset = gpu_id * range;
+        int offset = gpu_id * range;
 
         // Create a temporary result variable on the GPU and set its value to -1
         double resp = 0.0, *tmpResp;
@@ -254,24 +257,20 @@ double dimplingPrepare(int sharedOn)
         Node* devN;
         Params devP;
 
-        // Create an instance of Node on the GPU and copy the values on the host
-        // to it
-        gpuErrChk(cudaMalloc((void**)&devN, sizeof(Node)));
-        gpuErrChk(cudaMemcpy(devN, N, sizeof(Node), cudaMemcpyHostToDevice));
-
         // Calculate the required amount of space to run the instance on the GPU
-        size_t sz_node = sizeof(double) * MAX_S + sizeof(int) * 6 * MAX + sizeof(int) * 2;
-        size_t sz_prm = range * sizeof(int) * 2 + range * sizeof(double) + range * sizeof(int) * (7 * SIZE);
+        int64 sz_graph = sizeof(double) * MAX_S + sizeof(int) * 6 * MAX + sizeof(int) * 2;
+        int64 sz_prm = range * sizeof(int) * 2 + range * sizeof(double) + range * sizeof(int) * (7 * SIZE);
+        int64 sz_total = sz_graph + sz_prm;
 
-        if ((sz_graph + sz_prm) / MB > (1 << 10)) {
-            printf("Using %d GBytes on GPU %d\n", (sz_graph + sz_prm) / GB, gpu_id + 1);
+        if (sz_total / MB > (1LL << 10)) {
+            printf("Using %lld GBytes on GPU %d\n", sz_total / GB, gpu_id + 1);
         } else {
-            printf("Using %d MBytes on GPU %d\n", (sz_graph + sz_prm) / MB, gpu_id + 1);
+            printf("Using %lld MBytes on GPU %d\n", sz_total / MB, gpu_id + 1);
         }
 
         size_t cuInfo = 0, cuTotal = 0;
         gpuErrChk(cudaMemGetInfo(&cuInfo, &cuTotal));
-        cuInfo *= 0.95;
+        cuInfo *= 0.90;
         printf("Free memory: %d MBytes\n"
             "Total memory: %d MBytes\n",
             cuInfo / MB, cuTotal / MB);
@@ -286,8 +285,12 @@ double dimplingPrepare(int sharedOn)
         int it_perm, it_offset;
         printf("Required num. of iterations: %d\n", BATCH_CNT);
 
-        /*  Reserve the require amount of space for each variable on Params.
-            */
+        // Create an instance of Node on the GPU and copy the values on the host
+        // to it
+        gpuErrChk(cudaMalloc((void**)&devN, sizeof(Node)));
+        gpuErrChk(cudaMemcpy(devN, N, sizeof(Node), cudaMemcpyHostToDevice));
+
+        // Reserve the require amount of space for each variable on Params
         gpuErrChk(cudaMalloc((void**)&devP.faces, it_range * sizeof(int)));
         gpuErrChk(cudaMalloc((void**)&devP.count, it_range * sizeof(int)));
         gpuErrChk(cudaMalloc((void**)&devP.tmpMax, it_range * sizeof(double)));
