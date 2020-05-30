@@ -8,7 +8,7 @@
 #include <omp.h>
 #include <vector>
 
-#include "default.hpp"
+#include "helpers.hpp"
 #include "combinadic.hpp"
 
 using namespace std;
@@ -263,7 +263,7 @@ double dimplingPrepare(int sharedOn)
         size_t sz_node = sizeof(double) * MAX_S + sizeof(int) * 6 * MAX + sizeof(int) * 2;
         size_t sz_prm = range * sizeof(int) * 2 + range * sizeof(double) + range * sizeof(int) * (7 * SIZE);
 
-        if ((sz_graph + sz_prm) / MB > (1 << 10) {
+        if ((sz_graph + sz_prm) / MB > (1 << 10)) {
             printf("Using %d GBytes on GPU %d\n", (sz_graph + sz_prm) / GB, gpu_id + 1);
         } else {
             printf("Using %d MBytes on GPU %d\n", (sz_graph + sz_prm) / MB, gpu_id + 1);

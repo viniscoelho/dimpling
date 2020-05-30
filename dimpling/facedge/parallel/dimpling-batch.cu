@@ -145,7 +145,7 @@ int prepareEnvironment(int sharedOn)
         gpuErrChk(cudaMalloc((void**)&devP.E, 3 * SIZE * it_range * sizeof(int)));
         gpuErrChk(cudaMalloc((void**)&devP.edges_faces, 2 * SIZE * SIZE * it_range * sizeof(int)));
 
-        fprintf(stderr, "Kernel %d launched with %d blocks, each w/ %d threads\n",
+        fprintf(stderr, "Kernel %d launched with %d blocks, each w/ %d threads...\n",
             gpu_id + 1, it_range / THREADS + 1, THREADS);
 
         for (int btch_id = 0; btch_id < BATCH_CNT; ++btch_id) {
@@ -172,7 +172,7 @@ int prepareEnvironment(int sharedOn)
 
             // The result obtained by each GPU will only be copied if its value
             // is higher than the best one
-            printf("Iteration num. %d completed!\n"
+            printf("Iteration no. %d completed!\n"
                    "Kernel %d finished with local maximum %d\n"
                    "Copying results...\n",
                 btch_id + 1, gpu_id + 1, resp);

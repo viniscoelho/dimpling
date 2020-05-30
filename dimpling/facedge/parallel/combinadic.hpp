@@ -106,7 +106,7 @@ __device__ bool Combination::isValid()
 //-----------------------------------------------------------------------------
 
 /*
-    Return the largest value 'v' where 'v < a' and 'choose(v, b) <= x'.
+    Returns the largest value 'v' where 'v < a' and 'choose(v, b) <= x'.
     */
 __device__ int64 Combination::largestV(int a, int b, int64 x)
 {

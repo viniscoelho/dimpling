@@ -168,7 +168,7 @@ __device__ void edgeDimple(Graph* devG, Params* devP, int new_vertex,
     int range = devG->range;
     int numEdges = devP->numEdges[t];
 
-    // The removed edge.
+    // The removed edge
     edge r_edge = idx_to_edge(edge_idx, len);
 
     HashBucket h;
@@ -267,7 +267,7 @@ __device__ node maxGainEdge(Graph* devG, Params* devP, int graph[], int t)
     int range = devG->range;
 
     node gains(-1, -1, -1, -1, -1);
-    // Iterate through the remaining vertices.
+    // Iterate through the remaining vertices
     int remain = devP->remaining[t];
     int num_edges = devP->numEdges[t];
     for (int v_i = 0; v_i < remain; ++v_i)
