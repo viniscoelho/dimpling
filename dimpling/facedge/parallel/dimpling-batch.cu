@@ -91,7 +91,7 @@ int prepareEnvironment(int sharedOn)
             */
         int64 range = ceil(COMB / (double)GPU_CNT);
         int64 comb = ((gpu_id + 1) * range > COMB ? COMB - gpu_id * range : range);
-        int offset = gpu_id * range;
+        int64 offset = gpu_id * range;
 
         // Create a temporary result variable on the GPU and set its value to -1
         int resp = -1, *tmpResp;
@@ -102,9 +102,9 @@ int prepareEnvironment(int sharedOn)
         Params devP;
 
         // Calculate the required amount of space to run the instance on the GPU
-        int64 sz_graph = MAXS * sizeof(int) + 6 * MAXV * sizeof(int);
-        int64 sz_prm = 4 * range * sizeof(int) + (10 * MAXV) * range * sizeof(int)
-            + (2 * MAXV * MAXV) * range * sizeof(int);
+        int64 sz_graph = sizeof(int) * MAXS + sizeof(int) * 6 * MAXV;
+        int64 sz_prm = sizeof(int) * 4 * range + sizeof(int) * (10 * MAXV) * range
+            + sizeof(int) * (2 * MAXS) * range;
         int64 sz_total = sz_graph + sz_prm;
 
         if (sz_total / MB > (1LL << 10)) {
@@ -115,8 +115,8 @@ int prepareEnvironment(int sharedOn)
 
         /*
             BATCH_CNT   ---> Number of calls to the kernel for each GPU
-            it_range    ---> Range of the seeds in the batch
-            it_comb     ---> Number of seeds divided between the batches
+            it_range    ---> Range of the seeds in a batch
+            it_comb     ---> Number of seeds divided between batches
             it_offset   ---> Offset for each batch
             */
         size_t cuInfo = 0, cuTotal = 0;
@@ -150,16 +150,17 @@ int prepareEnvironment(int sharedOn)
             gpu_id + 1, it_range / THREADS + 1, THREADS);
 
         for (int btch_id = 0; btch_id < BATCH_CNT; ++btch_id) {
-            // Clear edge_faces on each step
-            gpuErrChk(cudaMemset(devP.edges_faces, -1, 2 * SIZE * SIZE * it_range * sizeof(int)));
             it_comb = ((btch_id + 1) * it_range > comb ? comb - btch_id * it_range : it_range);
             it_offset = btch_id * it_range + offset;
 
             dim3 blocks(it_comb / THREADS + 1, 1);
             dim3 threads(THREADS, 1);
 
+            // Clear edge_faces on each step
+            gpuErrChk(cudaMemset(devP.edges_faces, -1, 2 * SIZE * SIZE * it_range * sizeof(int)));
+
             // Won't use shared memory with instances over MAXV vertives
-            if (SIZE > MAXV || !sharedOn) {
+            if (SIZE > 150 || !sharedOn) {
                 solve<<<blocks, threads>>>(devG, devP, tmpResp, it_offset, it_comb);
                 gpuErrChk(cudaDeviceSynchronize());
             } else {

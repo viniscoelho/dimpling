@@ -259,7 +259,7 @@ double dimplingPrepare(int sharedOn)
 
         // Calculate the required amount of space to run the instance on the GPU
         int64 sz_graph = sizeof(double) * MAX_S + sizeof(int) * 6 * MAX + sizeof(int) * 2;
-        int64 sz_prm = range * sizeof(int) * 2 + range * sizeof(double) + range * sizeof(int) * (7 * SIZE);
+        int64 sz_prm = range * sizeof(int) * 2 + range * sizeof(double) + range * sizeof(int) * (7 * MAX);
         int64 sz_total = sz_graph + sz_prm;
 
         if (sz_total / MB > (1LL << 10)) {
@@ -276,8 +276,8 @@ double dimplingPrepare(int sharedOn)
             cuInfo / MB, cuTotal / MB);
 
         /*  BATCH_CNT       ---> Number of calls to the kernel for each GPU
-            it_range        ---> Range of the seeds in the batch
-            it_perm         ---> Number of seeds divided between the batches
+            it_range        ---> Range of the seeds in a batch
+            it_perm         ---> Number of seeds divided between batches
             it_offset       ---> Offset for each batch
             */
         int BATCH_CNT = (int)ceil(sz_prm / (double)cuInfo);

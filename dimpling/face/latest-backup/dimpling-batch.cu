@@ -265,25 +265,24 @@ int prepareEnvironment(int sharedOn)
             comb    ---> Number of seeds divided between the GPUs
             offset  ---> Offset for each GPU
             */
-        int64 range = (int)ceil(COMB / (double)GPU_CNT);
+        int64 range = ceil(COMB / (double)GPU_CNT);
         int64 comb = ((gpu_id + 1) * range > COMB ? COMB - gpu_id * range : range);
-        int offset = gpu_id * range;
+        int64 offset = gpu_id * range;
 
         // Create a temporary result variable on the GPU and set its value to -1
         int resp = -1, *tmpResp;
         gpuErrChk(cudaMalloc((void**)&tmpResp, sizeof(int)));
-        gpuErrChk(cudaMemcpy(tmpResp, &resp, sizeof(int),
-            cudaMemcpyHostToDevice));
+        gpuErrChk(cudaMemcpy(tmpResp, &resp, sizeof(int), cudaMemcpyHostToDevice));
 
         Graph* devG;
         Params devP;
 
         // Calculate the required amount of space to run the instance on the GPU
         int64 sz_graph = sizeof(int) * MAXS + sizeof(int) * 6 * MAXV;
-        int64 sz_prm = range * sizeof(int) * 3 + range * sizeof(int) * (7 * SIZE);
+        int64 sz_prm = sizeof(int) * 3 * range + sizeof(int) * (7 * MAXV) * range;
         int64 sz_total = sz_graph + sz_prm;
 
-        if (sz_total / MB > (1 << 10)) {
+        if (sz_total / MB > (1LL << 10)) {
             printf("Using %lld GBytes on GPU %d\n", sz_total / GB, gpu_id + 1);
         } else {
             printf("Using %lld MBytes on GPU %d\n", sz_total / MB, gpu_id + 1);
@@ -330,9 +329,8 @@ int prepareEnvironment(int sharedOn)
             dim3 threads(THREADS, 1);
 
             // Won't use shared memory with instances over MAXV vertives
-            if (SIZE > 100 || !sharedOn) {
-                solve<<<blocks, threads>>>(devG, devP, tmpResp,
-                    it_offset, it_comb);
+            if (SIZE > 150 || !sharedOn) {
+                solve<<<blocks, threads>>>(devG, devP, tmpResp, it_offset, it_comb);
                 gpuErrChk(cudaDeviceSynchronize());
             } else {
                 solveShared<<<blocks, threads, SIZE * SIZE * sizeof(int)>>>(devG,
@@ -341,8 +339,7 @@ int prepareEnvironment(int sharedOn)
             }
 
             // Copy the maximum weight found
-            gpuErrChk(cudaMemcpy(&resp, tmpResp, sizeof(int),
-                cudaMemcpyDeviceToHost));
+            gpuErrChk(cudaMemcpy(&resp, tmpResp, sizeof(int), cudaMemcpyDeviceToHost));
 
             // The result obtained by each GPU will only be copied if its value
             // is higher than the best one
@@ -386,7 +383,6 @@ int prepareEnvironment(int sharedOn)
 int main(int argv, char** argc)
 {
     int sharedOn = 0;
-
     // Turn shared memory on and set which GPU to use
     if (argv == 2) {
         sharedOn = 1;
